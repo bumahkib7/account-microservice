@@ -46,20 +46,22 @@ public class accountsResource {
 
     }
 
-    @POST
+    @PATCH
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     @Path("/{accountNumber}/withdraw")
     public Account withdrawFunds(@PathParam("accountNumber") Long accountNumber, BigDecimal amount) {
+
+        log.info("Attempting to withdraw {} from account {}", amount, accountNumber);
         Optional<Account> response = accounts.stream().filter(a -> a.getAccountNumber().equals(accountNumber)).findFirst();
         Account account = response.orElseThrow(()
                 -> new WebApplicationException("Account with id of " + accountNumber + " does not exist.", 404));
         account.withdrawFunds(amount);
         Optional<Account> response2 = account.getBalance().compareTo(BigDecimal.ZERO)
                 < amount.compareTo(BigDecimal.TEN) ? Optional.of(account) : Optional.empty();
+        log.info("Account balance is {}", account.getBalance());
         return response2.orElseThrow(()
                 -> new WebApplicationException("Insufficient funds", 400));
-
 
     }
 
@@ -69,6 +71,7 @@ public class accountsResource {
     @Path("/creatingNewAccount")
     public Account createNewAccount(Account account) {
         accounts.add(account);
+        log.info("creating account with number " + account);
         if (account.getAccountNumber() == null) {
             account.setAccountNumber((long) (accounts.size() + 1));
         } else {
@@ -77,6 +80,34 @@ public class accountsResource {
             }
         }
         log.info("Account created: " + account);
+        return account;
+    }
+
+    @PATCH
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    @Path("/{accountNumber}/deposit")
+    public Account depositFunds(@PathParam("accountNumber") Long accountNumber, BigDecimal amount) {
+        log.info("Deposit funds: " + amount);
+        Optional<Account> response = accounts.stream().filter(a -> a.getAccountNumber().equals(accountNumber)).findFirst();
+        Account account = response.orElseThrow(()
+                -> new WebApplicationException("Account with id of " + accountNumber + " does not exist.", 404));
+        account.addFunds(amount);
+        log.info("Account balance: " + account.getBalance());
+        return account;
+    }
+
+    @DELETE
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    @Path("/{accountNumber}/delete")
+    public Account deleteAccount(@PathParam("accountNumber") Long accountNumber) {
+        log.info("Delete account: " + accountNumber);
+        Optional<Account> response = accounts.stream().filter(a -> a.getAccountNumber().equals(accountNumber)).findFirst();
+        Account account = response.orElseThrow(()
+                -> new WebApplicationException("Account with id of " + accountNumber + " does not exist.", 404));
+        accounts.remove(account);
+        log.info("Account deleted: " + account);
         return account;
     }
 
